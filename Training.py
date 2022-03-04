@@ -11,27 +11,33 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
-import MLPNet.py
-import CustomDataSet.py
+import MLPNet
+import CustomDataSet
 import wandb
 import argparse
 
 #calculates the top 1 accuracy --> tp/(len(data_loader)) and loss
-def calcTop1Accuracy(Data_loader, net, device, criterion):
+def calcTop1Accuracy(Data_loader, net, device, criterion, doif=False, wandb=None):
     net.eval()
     correct = 0
     total = 0
     with torch.no_grad():
         for data in Data_loader:
-            spectras, labels = data[0].to(device), data[1].to(device)   #voor gpu
-          
+            spectras, label = data[0].to(device), data[1].to(device)   #voor gpu
+            
             outputs = net(spectras)
-            loss=criterion(outputs, labels)
+            loss=criterion(outputs, label)
           
             _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            
+            if(doif):
+              wandb.log({"PR" : wandb.plot.pr_curve(label, 
+                         outputs, labels=['D', 'E', 'F', 'G', 'H', 'I'])})
+            total += label.size(0)
+            correct += (predicted == label).sum().item()
         acc=100 * correct / total
+
+
     return acc, loss
 
 def main():
@@ -39,21 +45,21 @@ def main():
     #Get Flags
     parser=argparse.ArgumentParser(description='Flags for traing hyper parameters')
     
-    parser.add_argument("--dataset", help='Supply path to dataset, default value=NormalizedRough[D-I].csv.', default='NormalizedRough[D-I].csv')
+    parser.add_argument("--dataset", help='Supply path to dataset, default value=NormalizedRough[D-I].csv.', default="E:\\DatasetDiamonds\\NormalizedPolished[D-I].csv")
     parser.add_argument("--learningRate", help='Supply learning rate for training, default value=0.001', default='0.001')
     parser.add_argument("--weightDecay", help='Supply weight decay for training, default value=0.0001', default='0.0001')
     parser.add_argument("--epochs", help='Supply amount of epochs for training, default value=25', default='25')
     parser.add_argument("--batchSize", help='Supply batch_size for training loader, default value=32', default='32')
     
-    args=parser.pars_args()
+    args=parser.parse_args()
     
     #set-up weight and biases
     wandb.login()
+    wandb.require(experiment="service")
     wandb.init(name='training_run',
-               project='Thesis Diamonds',
-               entity='nicololmen')
-    wandb.config.lr=int(args.learningRate)
-    wandb.config.wd=int(args.weightDecay)
+               project='Thesis Diamonds')
+    wandb.config.lr=float(args.learningRate)
+    wandb.config.wd=float(args.weightDecay)
     
     #Get Headers
     Data=pd.read_csv(args.dataset, skiprows=0, nrows=2)
@@ -64,22 +70,40 @@ def main():
     train_loader=torch.utils.data.DataLoader(Dataset, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
     
     #Get test data
-    TestDataset=CustomDataSet.CostumDataSet(args.dataset, 9000, 10428, Headers)
+    TestDataset=CustomDataSet.CustomDataSet(args.dataset, 9000, 10428, Headers)
     test_loader=torch.utils.data.DataLoader(TestDataset, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
-    
+
+    TestDatasetD=CustomDataSet.CustomDataSet("E:\\DatasetDiamonds\\NormalizedPolished[D].csv", 1, 219, Headers)
+    test_loaderD=torch.utils.data.DataLoader(TestDatasetD, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
+
+    TestDatasetE=CustomDataSet.CustomDataSet("E:\\DatasetDiamonds\\NormalizedPolished[E].csv", 1, 251, Headers)
+    test_loaderE=torch.utils.data.DataLoader(TestDatasetE, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
+
+    TestDatasetF=CustomDataSet.CustomDataSet("E:\\DatasetDiamonds\\NormalizedPolished[F].csv", 1, 308, Headers)
+    test_loaderF=torch.utils.data.DataLoader(TestDatasetF, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
+
+    TestDatasetG=CustomDataSet.CustomDataSet("E:\\DatasetDiamonds\\NormalizedPolished[G].csv", 1, 266 , Headers)
+    test_loaderG=torch.utils.data.DataLoader(TestDatasetG, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
+
+    TestDatasetH=CustomDataSet.CustomDataSet("E:\\DatasetDiamonds\\NormalizedPolished[H].csv", 1, 224 , Headers)
+    test_loaderH=torch.utils.data.DataLoader(TestDatasetH, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
+
+    TestDatasetI=CustomDataSet.CustomDataSet("E:\\DatasetDiamonds\\NormalizedPolished[I].csv", 1, 161, Headers)
+    test_loaderI=torch.utils.data.DataLoader(TestDatasetI, batch_size=int(args.batchSize), shuffle=True , num_workers=1)
+
     #make the network model
     net=MLPNet.Net()
     
     #Initialize learning parameters
     criterion=nn.CrossEntropyLoss()
-    optimizer=optim.Adam(net.parameters(), lr=int(args.learningRate), weight_decay=int(args.weightDecay))
+    optimizer=optim.Adam(net.parameters(), lr=float(args.learningRate), weight_decay=float(args.weightDecay))
     
     #Load network to device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net.to(device)
     
     #monitor network
-    wandb.watch(net)
+    wandb.watch(net, criterion)
     
     #train loop
     for epoch in range(int(args.epochs)):
@@ -99,16 +123,36 @@ def main():
         optimizer.step()
     
         running_loss+=loss.item()
-      if((epoch+1)%5==0 and epoch!=0):
-        testacc, testloss=calcTop1Accuracy(test_loader, net, device, criterion)
-        trainacc, trainloss=calcTop1Accuracy(train_loader, net, device, criterion)
+     
+      testacc, testloss=calcTop1Accuracy(test_loader, net, device, criterion, True, wandb)
+      testaccD, testlossD=calcTop1Accuracy(test_loaderD, net, device, criterion)
+      testaccE, testlossE=calcTop1Accuracy(test_loaderE, net, device, criterion)
+      testaccF, testlossF=calcTop1Accuracy(test_loaderF, net, device, criterion)
+      testaccG, testlossG=calcTop1Accuracy(test_loaderG, net, device, criterion)
+      testaccH, testlossH=calcTop1Accuracy(test_loaderH, net, device, criterion)
+      testaccI, testlossI=calcTop1Accuracy(test_loaderI, net, device, criterion)
+      trainacc, trainloss=calcTop1Accuracy(train_loader, net, device, criterion)
         
-        print('After %d epochs train loss: %f, train accuracy: %d%%, test loss: %f test accuracy: %d%%' % (epoch+1, trainloss, trainacc, testloss, testacc))
         
-        wandb.log({"epoch": (epoch+1),
-                  "train_loss": trainloss,
-                  "train_acc": trainacc,
-                  "test_loss": testloss,
-                  "test_acc": testacc})
+        
+      wandb.log({"epoch": (epoch+1),
+                "train_loss": trainloss,
+                "train_acc": trainacc,
+                "test_loss": testloss,
+                "test_acc": testacc,
+                "test_acc_D": testaccD,
+                "test_loss_D": testlossD,
+                "test_acc_E": testaccE,
+                "test_loss_E": testlossE,
+                "test_acc_F": testaccF,
+                "test_loss_F": testlossF,
+                "test_acc_G": testaccG,
+                "test_loss_G": testlossG,
+                "test_acc_H": testaccH,
+                "test_loss_H": testlossH,
+                "test_acc_I": testaccI,
+                "test_loss_I": testlossI
+                })
 
-main()
+if __name__ == "__main__":
+    main()
