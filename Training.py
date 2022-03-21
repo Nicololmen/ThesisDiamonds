@@ -8,12 +8,12 @@ Created on Fri Feb 25 14:25:30 2022
 
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import pandas as pd
 import MLPNet
 import CustomDataSet
+from evaluation_metrics import calc_ap
 import wandb
 import argparse
 from tqdm import tqdm
@@ -47,7 +47,7 @@ def run_train_epoch(model, train_loader, optimizer, epoch_idx, device='cpu'):
         optimizer.step()
 
         # Log the training loss
-        wandb.log({"epoch": (epoch_idx),
+        wandb.log({"epoch": epoch_idx,
             "train_loss": loss})
 
 # moves batch to device
@@ -56,6 +56,7 @@ def batch_to_device(batch, device):
     batch[1] = batch[1].to(device)
 
     return batch
+
 
 #
 def run_val_epoch(model, val_loader, epoch_idx, writer, device='cpu'):
@@ -82,7 +83,8 @@ def run_val_epoch(model, val_loader, epoch_idx, writer, device='cpu'):
 
     for label in uniq_labels:
         ap = calc_ap(label, sim_mat, uniq_labels, q_labels)
-        writer.add_scalar(f"AP_val/{idx_to_class[label]}", ap, epoch_idx)
+        wandb.log({"epoch": epoch_idx,
+                   "avarage_precision": ap})
 
 
 def compute_logits_from_dataloader(model, data_loader, device='cpu'):
@@ -135,8 +137,8 @@ def main():
     parser.add_argument("--epochs", help='Supply amount of epochs for training, default value=25', default='25')
     parser.add_argument("--batch_size", help='Supply batch_size for training loader, default value=32', default='32')
     parser.add_argument("--num_workers", help='Supply num_workers for training loader, default value=1', default='1')
-    parser.add_argument("--numNodesPerLayer", help="Give model architecture eg 512-256-128-6", default="512-256-64-6")
-    parser.add_argument("--title", help="Give title for wandb log", default="default name")
+    parser.add_argument("--num_nodes_per_layer", help="Give model architecture eg 512-256-128-6", default="512-256-64-6")
+
     
     args=parser.parse_args()
 
@@ -154,18 +156,18 @@ def main():
 
     #set-up weight and biases
     wandb.require(experiment="service")
-    wandb.init(name=f'training_run {args.title}',
+    wandb.init(name=f'training_run {args.num_nodes_per_layer}',
                project='Thesis Diamonds')
-    wandb.config.lr=float(args.learningRate)
-    wandb.config.wd=float(args.weightDecay)
+    wandb.config.lr=float(args.learning_rate)
+    wandb.config.wd=float(args.weight_decay)
     
 
     #make the network model
-    model = MLPNet.Net(args.numNodesPerLayer)
+    model = MLPNet.Net(args.num_nodes_per_layer)
     
     #Initialize learning parameters
 
-    optimizer = optim.Adam(model.parameters(), lr=float(args.learningRate), weight_decay=float(args.weightDecay))
+    optimizer = optim.Adam(model.parameters(), lr=float(args.learning_rate), weight_decay=float(args.weight_decay))
 
     run_training(model, optimizer, train_loader,
                  val_loader, num_epochs=25)
