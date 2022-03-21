@@ -18,6 +18,7 @@ import wandb
 import argparse
 from tqdm import tqdm
 import numpy as np
+import datetime
 
 
 #ToDo betere functies
@@ -156,7 +157,7 @@ def main():
 
     #set-up weight and biases
     wandb.require(experiment="service")
-    wandb.init(name=f'training_run {args.num_nodes_per_layer}',
+    wandb.init(name=f'training_run {args.num_nodes_per_layer} {datetime.datetime.now().date()}',
                project='Thesis Diamonds')
     wandb.config.lr=float(args.learning_rate)
     wandb.config.wd=float(args.weight_decay)
