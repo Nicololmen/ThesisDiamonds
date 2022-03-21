@@ -7,16 +7,21 @@ Created on Fri Feb 25 14:24:47 2022
 
 
 import torch.nn as nn
-import torch.nn.functional as F
+
+
 
 class Net(nn.Module):
-  def __init__(self):
+  def __init__(self, architecture_lijst):
     super(Net, self).__init__()
-    self.fc1 = nn.Linear(641, 16)
-    self.fc2 = nn.Linear(16, 6)
-        
+    architecture_lijst = architecture_lijst.split('-')
+    layers = []
+    for index, (layer_in, layer_out) in enumerate(zip(architecture_lijst[0:], architecture_lijst[1:])):
+      print(layer_in, layer_out)
+      layers.append(nn.Linear(int(layer_in), int(layer_out)))
+      if (index != len(architecture_lijst) - 1):
+        layers.append(nn.ReLU())
+    self.model = nn.Sequential(*layers)
+
   def forward(self, input):
-    x = F.relu(self.fc1(input))
-    x = self.fc2(x)
-    return x
+    return self.model(input)
 
