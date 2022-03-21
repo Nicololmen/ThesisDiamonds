@@ -36,7 +36,7 @@ def run_train_step(model, batch, num_classes):
 # runs a training epoch
 def run_train_epoch(model, train_loader, optimizer, epoch_idx, device='cpu'):
     model.train()
-    num_classes = len(train_loader.dataset.classes)
+    num_classes = 6 #len(train_loader.dataset.classes)   Dit werkt niet weet niet goed vanwaar dit komt? extra veldje in CustomDataSet klasse?
     for batch_idx, train_batch in tqdm(enumerate(train_loader),
                                        total=len(train_loader),
                                        leave=False, desc='Train batch'):
@@ -74,9 +74,19 @@ def run_val_epoch(model, val_loader, epoch_idx, writer, device='cpu'):
     sim_mat = F.softmax(logits, dim=1)
 
     # Log average precision
+    # weederom zelfde vraag als daarnet. Is dit een extra veldje?
+    #idx_to_class = {
+        #idx: class_name
+        #for class_name, idx in val_loader.dataset.class_to_idx.items()
+    #}
+
     idx_to_class = {
-        idx: class_name
-        for class_name, idx in val_loader.dataset.class_to_idx.items()
+        0: "D",
+        1: "E",
+        2: "F",
+        3: "G",
+        4: "H",
+        5: "I"
     }
 
     # Create an array with the labels (indices) in the dataset
@@ -144,7 +154,7 @@ def main():
     args=parser.parse_args()
 
     # Get Headers
-    Data = pd.read_csv(args.dataset, skiprows=0, nrows=2)
+    Data = pd.read_csv(args.data_set, skiprows=0, nrows=2)
     Headers = Data.columns
 
     # Get training Data
@@ -171,7 +181,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=float(args.learning_rate), weight_decay=float(args.weight_decay))
 
     run_training(model, optimizer, train_loader,
-                 val_loader, num_epochs=25)
+                 val_loader, num_epochs=int(args.epochs))
 
 
 if __name__ == "__main__":
