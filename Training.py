@@ -92,6 +92,7 @@ def run_val_epoch(model, val_loader, epoch_idx, writer, device='cpu'):
     # Create an array with the labels (indices) in the dataset
     uniq_labels = np.array(list(idx_to_class))
 
+
     for label in uniq_labels:
         ap = calc_ap(label, sim_mat, uniq_labels, q_labels)
         wandb.log({"epoch": epoch_idx,
@@ -180,8 +181,7 @@ def main():
 
     optimizer = optim.Adam(model.parameters(), lr=float(args.learning_rate), weight_decay=float(args.weight_decay))
 
-    run_training(model, optimizer, train_loader,
-                 val_loader, num_epochs=int(args.epochs))
+    run_training(model, optimizer, train_loader, val_loader, num_epochs=int(args.epochs))
 
 
 if __name__ == "__main__":

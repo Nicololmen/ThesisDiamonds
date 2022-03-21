@@ -16,7 +16,6 @@ class Net(nn.Module):
     architecture_lijst = architecture_lijst.split('-')
     layers = []
     for index, (layer_in, layer_out) in enumerate(zip(architecture_lijst[0:], architecture_lijst[1:])):
-      print(layer_in, layer_out)
       layers.append(nn.Linear(int(layer_in), int(layer_out)))
       if (index != len(architecture_lijst) - 1):
         layers.append(nn.ReLU())
