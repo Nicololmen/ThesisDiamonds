@@ -16,7 +16,7 @@ import CustomDataSet
 import wandb
 import argparse
 
-#calculates the top 1 accuracy --> tp/(len(data_loader)) and loss
+#ToDo betere functies
 def calcTop1Accuracy(Data_loader, net, device, criterion, doif=False, wandb=None):
     net.eval()
     correct = 0
@@ -50,13 +50,14 @@ def main():
     parser.add_argument("--weightDecay", help='Supply weight decay for training, default value=0.0001', default='0.0001')
     parser.add_argument("--epochs", help='Supply amount of epochs for training, default value=25', default='25')
     parser.add_argument("--batchSize", help='Supply batch_size for training loader, default value=32', default='32')
+    parser.add_argument("--numNodesPerLayer", help="", default="512-256-64-6")
     
     args=parser.parse_args()
     
     #set-up weight and biases
-    wandb.login()
+    
     wandb.require(experiment="service")
-    wandb.init(name='training_run',
+    wandb.init(name=f'training_run {}',   #ToDo: nieuwe naam die uniek is
                project='Thesis Diamonds')
     wandb.config.lr=float(args.learningRate)
     wandb.config.wd=float(args.weightDecay)
