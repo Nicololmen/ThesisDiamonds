@@ -8,9 +8,9 @@ import pandas as pd
 import torch
 
 class CustomDataSet():
-  def __init__(self, filename, start, end, headers):
+  def __init__(self, filename, start, end, headers, drop_headers):
     self.data=pd.read_csv(filename, skiprows=start, nrows=end, names=headers)
-    self.data=self.data.drop(columns=['Lot', 'SCTF_CLARITY', 'PolishedPicture', 'IntegrationTimePolished', 'SCTF_FLUO', 'GIAColor', 'FileName', 'PolishedFile', 'wp'])
+    self.data=self.data.drop(columns=drop_headers)
     
     
   def __len__(self):
