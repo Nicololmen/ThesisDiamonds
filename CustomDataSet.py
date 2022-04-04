@@ -8,9 +8,10 @@ import pandas as pd
 import torch
 
 class CustomDataSet():
-  def __init__(self, filename, start, end, headers, drop_headers):
-    self.data=pd.read_csv(filename, skiprows=start, nrows=end, names=headers)
-    self.data=self.data.drop(columns=drop_headers)
+  def __init__(self, filename, start, end, headers, drop_headers, model_type):
+    self.data = pd.read_csv(filename, skiprows=start, nrows=end, names=headers)
+    self.data = self.data.drop(columns=drop_headers)
+    self.model_type = model_type
     
     
   def __len__(self):
@@ -20,6 +21,10 @@ class CustomDataSet():
     row=self.data.iloc[idx]
     label=row[0]
     features=row[1:642]
-    
-    features=torch.Tensor(features)
+    features = torch.Tensor(features)
+
+    #Add extra dim for Convolution network
+    if(self.model_type):
+      features = features[None, :]
+
     return features, int(label)

@@ -12,6 +12,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import pandas as pd
 import MLPNet
+import ConvNet
 import CustomDataSet
 from HulpFunctions.evaluation_metrics import calc_ap
 import wandb
@@ -23,7 +24,7 @@ import datetime
 
 #
 def run_val_epoch(model, val_loader, epoch_index, device='cpu'):
-    # Put model in eval mode
+    # Put model in evaluation mode
     model.eval()
 
     predictions, labels = run_eval_step(model, val_loader, device)
@@ -36,7 +37,8 @@ def run_val_epoch(model, val_loader, epoch_index, device='cpu'):
         ap = calc_ap(label, sim_mat, uniq_labels, labels)
         # Log the evaluation accuracy
         wandb.log({"epoch": epoch_index + 1,
-                   f"avarage precision {label}": ap})
+                   "avarage precision": ap,
+                   f"avarage precision {label}": ap}, commit=False)
 
 
 def run_eval_step(model, data_loader, device='cpu'):
@@ -93,7 +95,7 @@ def run_train_epoch(model, train_loader, optimizer, epoch_index, device='cpu'):
 
         # Log the training loss
         wandb.log({"epoch": epoch_index + 1,
-            "training loss": loss})
+            "training loss": loss}, commit=True)
 
 
 def run_training(model, optimizer, train_loader, val_loader, num_epochs=10):
@@ -117,6 +119,7 @@ def main():
     parser.add_argument("--num_workers", help='Supply num_workers for training loader, default value=1', default='1')
     parser.add_argument("--num_nodes_per_layer", help="Give model architecture eg 512-256-128-6", default="641-16-6")
     parser.add_argument("--P_or_R", help="1 for polished 0 for rough", default="0")
+    parser.add_argument("--Conv_or_MLP", help="1 for Conv 0 for MLP", default="0")
 
     args=parser.parse_args()
 
@@ -130,22 +133,30 @@ def main():
         drop_headers = ['Lot', 'MR_CLARITY', 'RoughPicture', 'IntegrationTimeRough', 'MR_FLUO', 'GIAColor', 'FileName', 'wp', 'wr']
         dst = 'Rough'
     # Get training Data
-    data_set = CustomDataSet.CustomDataSet(args.data_set, 1, 9000, Headers, drop_headers)
+    data_set = CustomDataSet.CustomDataSet(args.data_set, 1, 9000, Headers, drop_headers, int(args.Conv_or_MLP))
     train_loader = torch.utils.data.DataLoader(data_set, batch_size=int(args.batch_size), shuffle=True, num_workers=int(args.num_workers))
     # Get test data
-    val_data_set = CustomDataSet.CustomDataSet(args.data_set, 9000, 10428, Headers, drop_headers)
+    val_data_set = CustomDataSet.CustomDataSet(args.data_set, 9000, 10428, Headers, drop_headers, int(args.Conv_or_MLP))
     val_loader = torch.utils.data.DataLoader(val_data_set, batch_size=int(args.batch_size), shuffle=True, num_workers=int(args.num_workers))
 
     # Set-up weight and biases
     wandb.require(experiment="service")
-    wandb.init(name=f'training_run {args.num_nodes_per_layer} {datetime.datetime.now().date()} {dst}',
-               project='Thesis Diamonds')
-    wandb.config.lr=float(args.learning_rate)
-    wandb.config.wd=float(args.weight_decay)
-    
+
 
     # Make the network model
-    model = MLPNet.Net(args.num_nodes_per_layer)
+    if(not(int(args.Conv_or_MLP))):
+        model = MLPNet.MLPNet(args.num_nodes_per_layer)
+        wandb.init(name=f'training_run {args.num_nodes_per_layer} {datetime.datetime.now().date()} {dst}',
+                   project='Thesis Diamonds')
+    if(int(args.Conv_or_MLP)):
+        model = ConvNet.ConvNet()
+        wandb.init(name=f'training_run Conv {datetime.datetime.now().date()} {dst}',
+                   project='Thesis Diamonds')
+
+
+    #Weights and biases set-up
+    wandb.config.lr = float(args.learning_rate)
+    wandb.config.wd = float(args.weight_decay)
     
     # Initialize learning parameters
     optimizer = optim.Adam(model.parameters(), lr=float(args.learning_rate), weight_decay=float(args.weight_decay))

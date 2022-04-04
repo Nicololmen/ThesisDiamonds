@@ -10,9 +10,9 @@ import torch.nn as nn
 from torchsummary import summary
 
 
-class Net(nn.Module):
+class MLPNet(nn.Module):
   def __init__(self, architecture_lijst):
-    super(Net, self).__init__()
+    super(MLPNet, self).__init__()
     architecture_lijst = architecture_lijst.split('-')
     layers = []
     for index, (layer_in, layer_out) in enumerate(zip(architecture_lijst[0:], architecture_lijst[1:])):
