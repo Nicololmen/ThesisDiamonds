@@ -62,7 +62,7 @@ class HybrideDataSet():
         elif (clarity == 'I3'):
             c = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
-        #wp = pd.concat([wp, wr])
+        wp = pd.concat([wp, wr])
         wp = pd.concat([wp, integrationTime]) 
         wp = np.array(wp, dtype=np.float32)
         wp = np.concatenate([wp, c])
